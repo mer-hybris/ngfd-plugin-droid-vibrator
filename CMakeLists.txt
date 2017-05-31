@@ -22,3 +22,4 @@ target_link_libraries(ngfd_droid-vibrator ${DROID_VIBRATOR_LIBRARIES})
 target_link_libraries(ngfd_droid-vibrator ${LIBHARDWARE_LIBRARIES})
 
 install(TARGETS ngfd_droid-vibrator LIBRARY DESTINATION lib/ngf)
+install(FILES 50-droid-vibrator.ini DESTINATION share/ngfd/plugins.d)
