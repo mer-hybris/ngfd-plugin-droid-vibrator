@@ -45,3 +45,4 @@ fi
 %defattr(-,root,root,-)
 %doc README COPYING
 %{_libdir}/ngf/libngfd_droid-vibrator.so
+%{_datadir}/ngfd/plugins.d/50-droid-vibrator.ini
