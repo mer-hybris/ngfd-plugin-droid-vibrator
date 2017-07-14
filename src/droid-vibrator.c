@@ -23,7 +23,12 @@
 
 #include <ngf/plugin.h>
 #include <ngf/haptic.h>
+#include <android-version.h>
+#if ANDROID_VERSION_MAJOR >= 7
+#include <hardware/vibrator.h>
+#else
 #include <hardware_legacy/vibrator.h>
+#endif
 
 #define AV_KEY "plugin.droid-vibrator.data"
 #define LOG_CAT  "droid-vibrator: "
@@ -75,6 +80,10 @@ typedef struct DroidVibratorData
 
 static GHashTable      *plugin_effects;
 static const NProplist *plugin_properties;
+
+#if ANDROID_VERSION_MAJOR >= 7
+static vibrator_device_t *dev;
+#endif
 
 N_PLUGIN_NAME        ("droid-vibrator")
 N_PLUGIN_VERSION     ("0.2")
@@ -220,6 +229,18 @@ droid_vibrator_sink_initialize (NSinkInterface *iface)
     (void) iface;
     N_DEBUG (LOG_CAT "sink initialize");
 
+#if ANDROID_VERSION_MAJOR >= 7
+    struct hw_module_t *hwmod;
+
+    hw_get_module (VIBRATOR_HARDWARE_MODULE_ID, (const hw_module_t **)(&hwmod));
+    g_assert(hwmod != NULL);
+
+    if (vibrator_open (hwmod, &dev) < 0) {
+        N_DEBUG (LOG_CAT "unable to open vibrator device");
+        return FALSE;
+    }
+#endif
+
     g_assert(plugin_properties);
     plugin_effects = effects_parse (plugin_properties);
 
@@ -322,7 +343,12 @@ sequence_play (DroidVibratorData *data)
 
     data->sequence_id = g_timeout_add (step->value, sequence_cb, data);
     if (step->type == EFFECT_STEP_VIBRA)
+#if ANDROID_VERSION_MAJOR >= 7
+        dev->vibrator_on (dev, step->value);
+#else
         vibrator_on (step->value);
+#endif
+
 }
 
 static int
@@ -346,7 +372,11 @@ sequence_stop (DroidVibratorData *data)
     if (data->sequence_id > 0) {
         g_source_remove (data->sequence_id);
         data->sequence_id = 0;
+#if ANDROID_VERSION_MAJOR >= 7
+        dev->vibrator_off (dev);
+#else
         vibrator_off ();
+#endif
     }
 }
 
@@ -394,6 +424,9 @@ N_PLUGIN_LOAD (plugin)
         .stop       = droid_vibrator_sink_stop
     };
 
+#if ANDROID_VERSION_MAJOR >= 7
+    dev = NULL;
+#endif
     plugin_properties = n_plugin_get_params (plugin);
     n_plugin_register_sink (plugin, &decl);
 
