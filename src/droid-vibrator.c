@@ -23,15 +23,10 @@
 
 #include <ngf/plugin.h>
 #include <ngf/haptic.h>
-#include <android-version.h>
-#if ANDROID_VERSION_MAJOR >= 7
-#include <hardware/vibrator.h>
-#else
-#include <hardware_legacy/vibrator.h>
-#endif
+
+#include "implementation.h"
 
 #define AV_KEY "plugin.droid-vibrator.data"
-#define LOG_CAT  "droid-vibrator: "
 
 #define EFFECT_LIST             "EFFECT_LIST"
 #define EFFECT_LIST_DELIMITER   ","
@@ -79,15 +74,10 @@ typedef struct DroidVibratorData
 } DroidVibratorData;
 
 static GHashTable      *plugin_effects;
-static const NProplist *plugin_properties;
-
-#if ANDROID_VERSION_MAJOR >= 7
-static vibrator_device_t *dev;
-#endif
 
 N_PLUGIN_NAME        ("droid-vibrator")
-N_PLUGIN_VERSION     ("0.2")
-N_PLUGIN_DESCRIPTION ("Haptic feedback using Droid Vibrator HAL via libhybris")
+N_PLUGIN_VERSION     ("0.3")
+N_PLUGIN_DESCRIPTION (IMPLEMENTATION_DESCRIPTION)
 
 static void
 effect_free (gpointer data)
@@ -224,45 +214,6 @@ effect_list_done:
 }
 
 static int
-droid_vibrator_sink_initialize (NSinkInterface *iface)
-{
-    (void) iface;
-    N_DEBUG (LOG_CAT "sink initialize");
-
-#if ANDROID_VERSION_MAJOR >= 7
-    struct hw_module_t *hwmod;
-
-    hw_get_module (VIBRATOR_HARDWARE_MODULE_ID, (const hw_module_t **)(&hwmod));
-    g_assert(hwmod != NULL);
-
-    if (vibrator_open (hwmod, &dev) < 0) {
-        N_DEBUG (LOG_CAT "unable to open vibrator device");
-        return FALSE;
-    }
-#endif
-
-    g_assert(plugin_properties);
-    plugin_effects = effects_parse (plugin_properties);
-
-    if (!plugin_effects)
-        return FALSE;
-
-    return TRUE;
-}
-
-static void
-droid_vibrator_sink_shutdown (NSinkInterface *iface)
-{
-    (void) iface;
-    N_DEBUG (LOG_CAT "sink shutdown");
-
-    if (plugin_effects) {
-        g_hash_table_destroy (plugin_effects);
-        plugin_effects = NULL;
-    }
-}
-
-static int
 droid_vibrator_sink_can_handle (NSinkInterface *iface, NRequest *request)
 {
     N_DEBUG (LOG_CAT "sink can_handle");
@@ -343,12 +294,7 @@ sequence_play (DroidVibratorData *data)
 
     data->sequence_id = g_timeout_add (step->value, sequence_cb, data);
     if (step->type == EFFECT_STEP_VIBRA)
-#if ANDROID_VERSION_MAJOR >= 7
-        dev->vibrator_on (dev, step->value);
-#else
-        vibrator_on (step->value);
-#endif
-
+        h_vibrator_on (step->value);
 }
 
 static int
@@ -372,11 +318,7 @@ sequence_stop (DroidVibratorData *data)
     if (data->sequence_id > 0) {
         g_source_remove (data->sequence_id);
         data->sequence_id = 0;
-#if ANDROID_VERSION_MAJOR >= 7
-        dev->vibrator_off (dev);
-#else
-        vibrator_off ();
-#endif
+        h_vibrator_off ();
     }
 }
 
@@ -411,12 +353,12 @@ droid_vibrator_sink_stop (NSinkInterface *iface, NRequest *request)
 
 N_PLUGIN_LOAD (plugin)
 {
-    N_DEBUG (LOG_CAT "plugin load");
+    const NProplist *properties;
 
     static const NSinkInterfaceDecl decl = {
-        .name       = "droid-vibrator",
-        .initialize = droid_vibrator_sink_initialize,
-        .shutdown   = droid_vibrator_sink_shutdown,
+        .name       = IMPLEMENTATION_NAME,
+        .initialize = NULL,
+        .shutdown   = NULL,
         .can_handle = droid_vibrator_sink_can_handle,
         .prepare    = droid_vibrator_sink_prepare,
         .play       = droid_vibrator_sink_play,
@@ -424,10 +366,17 @@ N_PLUGIN_LOAD (plugin)
         .stop       = droid_vibrator_sink_stop
     };
 
-#if ANDROID_VERSION_MAJOR >= 7
-    dev = NULL;
-#endif
-    plugin_properties = n_plugin_get_params (plugin);
+    properties = n_plugin_get_params (plugin);
+    g_assert (properties);
+
+    if (h_vibrator_open (properties) < 0)
+        return FALSE;
+
+    plugin_effects = effects_parse (properties);
+
+    if (!plugin_effects)
+        return FALSE;
+
     n_plugin_register_sink (plugin, &decl);
 
     return TRUE;
@@ -437,5 +386,10 @@ N_PLUGIN_UNLOAD (plugin)
 {
     (void) plugin;
 
-    N_DEBUG (LOG_CAT "plugin unload");
+    if (plugin_effects) {
+        g_hash_table_destroy (plugin_effects);
+        plugin_effects = NULL;
+    }
+
+    h_vibrator_close ();
 }
