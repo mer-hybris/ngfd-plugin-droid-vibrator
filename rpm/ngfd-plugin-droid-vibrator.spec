@@ -3,7 +3,7 @@ Summary:    Droid Vibrator HAL plugin for ngfd
 Version:    0.92
 Release:    1
 Group:      System/Daemons
-License:    LGPL 2.1
+License:    LGPLv2+
 URL:        https://github.com/mer-hybris/ngfd-plugin-droid-vibrator
 Source:     %{name}-%{version}.tar.gz
 Requires:   ngfd >= 0.92
