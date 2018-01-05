@@ -1,5 +1,8 @@
 Non-graphical feedback daemon: Droid Vibrator HAL plugin
 --------------------------------------------------------
 
-This plugin builds against libhybris' libvibrator and libhardware wrappers to
+There are two implementations, one using kernel API directly (bypassing HAL)
+and one using libvibrator through libhybris.
+
+HAL variant builds against libhybris' libvibrator and libhardware wrappers to
 provide haptic feedback for mer-hybris hardware adaptations.

@@ -1,5 +1,5 @@
-Name:       ngfd-plugin-droid-vibrator
-Summary:    Droid Vibrator HAL plugin for ngfd
+Name:       ngfd-plugin-native-vibrator
+Summary:    Droid Vibrator native plugin for ngfd
 Version:    0.92
 Release:    1
 Group:      System/Daemons
@@ -10,10 +10,7 @@ Requires:   ngfd >= 0.92
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(ngf-plugin) >= 0.92
-BuildRequires:  pkgconfig(android-headers)
-BuildRequires:  pkgconfig(libvibrator)
-BuildRequires:  pkgconfig(libhardware)
-Conflicts:  ngfd-plugin-native-vibrator
+Conflicts:  ngfd-plugin-droid-vibrator
 
 %description
 This package contains the Droid Vibrator plugin
@@ -23,7 +20,7 @@ for the non-graphical feedback daemon.
 %setup -q -n %{name}-%{version}
 
 %build
-%cmake -DNATIVE_VIBRATOR=OFF
+%cmake -DNATIVE_VIBRATOR=ON
 make %{?jobs:-j%jobs}
 
 %install
