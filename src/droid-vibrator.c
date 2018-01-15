@@ -353,6 +353,7 @@ N_PLUGIN_LOAD (plugin)
 
     static const NSinkInterfaceDecl decl = {
         .name       = IMPLEMENTATION_NAME,
+        .type       = N_SINK_INTERFACE_TYPE_VIBRATOR,
         .initialize = NULL,
         .shutdown   = NULL,
         .can_handle = droid_vibrator_sink_can_handle,
