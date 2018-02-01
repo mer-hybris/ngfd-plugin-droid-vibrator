@@ -6,10 +6,10 @@ Group:      System/Daemons
 License:    LGPLv2+
 URL:        https://github.com/mer-hybris/ngfd-plugin-droid-vibrator
 Source:     %{name}-%{version}.tar.gz
-Requires:   ngfd >= 0.92
+Requires:   ngfd >= 1.0
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(glib-2.0)
-BuildRequires:  pkgconfig(ngf-plugin) >= 0.92
+BuildRequires:  pkgconfig(ngf-plugin) >= 1.0
 BuildRequires:  pkgconfig(android-headers)
 BuildRequires:  pkgconfig(libvibrator)
 BuildRequires:  pkgconfig(libhardware)

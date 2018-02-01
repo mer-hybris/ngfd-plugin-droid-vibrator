@@ -225,15 +225,11 @@ droid_vibrator_sink_prepare (NSinkInterface *iface, NRequest *request)
 {
     DroidVibratorData *data;
     DroidVibratorEffect *effect;
-    const NProplist *props;
     const gchar *key;
 
     N_DEBUG (LOG_CAT "sink prepare");
 
-    props = n_request_get_properties (request);
-
-    key = n_proplist_get_string(props, HAPTIC_TYPE_KEY);
-    if (key == NULL) {
+    if (!(key = n_haptic_effect_for_request (request))) {
         N_DEBUG (LOG_CAT "no effect key found for this effect");
         return FALSE;
     }
@@ -357,6 +353,7 @@ N_PLUGIN_LOAD (plugin)
 
     static const NSinkInterfaceDecl decl = {
         .name       = IMPLEMENTATION_NAME,
+        .type       = N_SINK_INTERFACE_TYPE_VIBRATOR,
         .initialize = NULL,
         .shutdown   = NULL,
         .can_handle = droid_vibrator_sink_can_handle,
