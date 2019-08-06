@@ -1,6 +1,6 @@
 Name:       ngfd-plugin-native-vibrator
 Summary:    Droid Vibrator native plugin for ngfd
-Version:    1.1
+Version:    1.2
 Release:    1
 Group:      System/Daemons
 License:    LGPLv2+
