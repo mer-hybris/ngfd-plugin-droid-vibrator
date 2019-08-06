@@ -30,18 +30,6 @@ make %{?jobs:-j%jobs}
 rm -rf %{buildroot}
 %make_install
 
-%post
-if [ "$1" -ge 1 ]; then
-    systemctl-user daemon-reload || true
-    systemctl-user restart ngfd.service || true
-fi
-
-%postun
-if [ "$1" -eq 0 ]; then
-    systemctl-user stop ngfd.service || true
-    systemctl-user daemon-reload || true
-fi
-
 %files
 %defattr(-,root,root,-)
 %doc README COPYING
