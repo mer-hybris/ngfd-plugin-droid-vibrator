@@ -2,7 +2,6 @@ Name:       ngfd-plugin-native-vibrator
 Summary:    Droid Vibrator native plugin for ngfd
 Version:    1.2
 Release:    1
-Group:      System/Daemons
 License:    LGPLv2+
 URL:        https://github.com/mer-hybris/ngfd-plugin-droid-vibrator
 Source:     %{name}-%{version}.tar.gz
@@ -21,7 +20,7 @@ for the non-graphical feedback daemon.
 
 %build
 %cmake -DNATIVE_VIBRATOR=ON
-make %{?jobs:-j%jobs}
+make %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}

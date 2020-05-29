@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
+include(GNUInstallDirs)
+
 option(NATIVE_VIBRATOR "Use vibra directly through kernel interface instead of using HAL" OFF)
 
 project(ngfd-plugin-droid-vibrator)
@@ -34,5 +36,5 @@ else()
     target_link_libraries(ngfd_droid-vibrator ${LIBHARDWARE_LIBRARIES})
 endif()
 
-install(TARGETS ngfd_droid-vibrator LIBRARY DESTINATION lib/ngf)
+install(TARGETS ngfd_droid-vibrator LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/ngf)
 install(FILES 50-droid-vibrator.ini DESTINATION share/ngfd/plugins.d)
