@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.6)
 
-include(GNUInstallDirs)
-
 option(NATIVE_VIBRATOR "Use vibra directly through kernel interface instead of using HAL" OFF)
 
 project(ngfd-plugin-droid-vibrator)
+
+include(GNUInstallDirs)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
