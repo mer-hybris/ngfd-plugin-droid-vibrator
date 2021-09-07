@@ -38,6 +38,7 @@
 #define MIN_STEP_TIME           (1)     /* 1 ms */
 #define MAX_REPEATS             (100)
 #define REPEAT_FOREVER          (-1)
+#define HAPTIC_DURATION         "haptic.duration"
 
 enum EffectStepType {
     EFFECT_STEP_NONE,
@@ -70,6 +71,7 @@ typedef struct DroidVibratorData
     guint                   sequence_id;
     DroidVibratorEffect    *current_effect;
     GSList                 *current_step;
+    guint                   remaining;
     int                     repeat_count;
 } DroidVibratorData;
 
@@ -226,6 +228,7 @@ droid_vibrator_sink_prepare (NSinkInterface *iface, NRequest *request)
     DroidVibratorData *data;
     DroidVibratorEffect *effect;
     const gchar *key;
+    const NProplist *properties = n_request_get_properties (request);
 
     N_DEBUG (LOG_CAT "sink prepare");
 
@@ -245,7 +248,8 @@ droid_vibrator_sink_prepare (NSinkInterface *iface, NRequest *request)
     data->sequence_id    = 0;
     data->current_effect = effect;
     data->current_step   = effect->steps;
-    data->repeat_count   = effect->repeat;
+    data->remaining      = n_proplist_get_uint (properties, HAPTIC_DURATION);
+    data->repeat_count   = data->remaining ? REPEAT_FOREVER : effect->repeat;
 
     n_request_store_data (request, AV_KEY, data);
     n_sink_interface_synchronize (iface, request);
@@ -273,6 +277,7 @@ static void
 sequence_play (DroidVibratorData *data)
 {
     DroidVibratorEffectStep *step;
+    guint duration;
 
     if (!data->current_step) {
         if (data->repeat_count == REPEAT_FOREVER)
@@ -288,9 +293,30 @@ sequence_play (DroidVibratorData *data)
 
     step = g_slist_nth_data (data->current_step, 0);
 
-    data->sequence_id = g_timeout_add (step->value, sequence_cb, data);
+    if (data->remaining) {
+        /* If remaining duration was specified, clamp step length to it and
+           decrease remaining by that value. If remaining runs out, stop the
+           effect. */
+        if (data->remaining > step->value) {
+            if (step->type == EFFECT_STEP_VIBRA && !g_slist_next(data->current_effect->steps))
+                /* If the effect consists only of single vibration sequence,
+                   play it as long as possible. */
+                duration = data->remaining < MAX_STEP_TIME ? data->remaining : MAX_STEP_TIME;
+            else
+                duration = step->value;
+        } else
+            duration = data->remaining;
+        data->remaining -= duration;
+        if (data->remaining == 0) {
+            data->current_step = NULL;
+            data->repeat_count = 0;
+        }
+    } else {
+        duration = step->value;
+    }
+    data->sequence_id = g_timeout_add (duration, sequence_cb, data);
     if (step->type == EFFECT_STEP_VIBRA)
-        h_vibrator_on (step->value);
+        h_vibrator_on (duration);
 }
 
 static int
