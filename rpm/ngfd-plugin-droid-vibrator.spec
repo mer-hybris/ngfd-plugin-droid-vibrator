@@ -31,6 +31,7 @@ rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
-%doc README COPYING
+%license COPYING
+%doc README
 %{_libdir}/ngf/libngfd_droid-vibrator.so
 %{_datadir}/ngfd/plugins.d/50-droid-vibrator.ini
