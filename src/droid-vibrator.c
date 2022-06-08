@@ -39,6 +39,7 @@
 #define MAX_REPEATS             (100)
 #define REPEAT_FOREVER          (-1)
 #define HAPTIC_DURATION         "haptic.duration"
+#define EFFECT_SEQUENCE         "haptic.sequence"
 
 enum EffectStepType {
     EFFECT_STEP_NONE,
@@ -73,6 +74,8 @@ typedef struct DroidVibratorData
     GSList                 *current_step;
     guint                   remaining;
     int                     repeat_count;
+    /* Effect is parsed for the event and freed after use. */
+    gboolean                one_shot;
 } DroidVibratorData;
 
 static GHashTable      *plugin_effects;
@@ -90,17 +93,15 @@ effect_free (gpointer data)
 }
 
 static DroidVibratorEffect*
-effect_parse (const char *name, const NProplist *properties)
+effect_parse (const char *sequence)
 {
     DroidVibratorEffect *effect = NULL;
-    const gchar *sequence = NULL;
     gchar **sequence_parts = NULL;
     int i;
 
-    if (!(sequence = n_proplist_get_string (properties, name))) {
-        N_WARNING (LOG_CAT "sequence missing for %s", name);
+    if (!sequence || !*sequence)
         return NULL;
-    }
+
     sequence_parts = g_strsplit(sequence, EFFECT_LIST_DELIMITER, 0);
 
     effect = g_new0 (DroidVibratorEffect, 1);
@@ -116,7 +117,7 @@ effect_parse (const char *name, const NProplist *properties)
             g_strfreev (step);
             effect_free (effect);
             effect = NULL;
-            N_WARNING (LOG_CAT "bad sequence string '%s', ignoring sequence %s", sequence, name);
+            N_WARNING (LOG_CAT "bad sequence string '%s', ignoring sequence", sequence);
             goto done;
         }
 
@@ -167,12 +168,25 @@ done:
     g_strfreev (sequence_parts);
 
     if (effect && !effect->steps) {
-        N_WARNING (LOG_CAT "no valid effect steps, ignoring sequence %s", name);
+        N_WARNING (LOG_CAT "no valid effect steps, ignoring sequence '%s'", sequence);
         effect_free (effect);
         effect = NULL;
     }
 
     return effect;
+}
+
+static DroidVibratorEffect*
+effect_parse_from_proplist (const char *name, const NProplist *properties)
+{
+    const gchar *sequence = NULL;
+
+    if (!(sequence = n_proplist_get_string (properties, name))) {
+        N_WARNING (LOG_CAT "sequence missing for %s", name);
+        return NULL;
+    }
+
+    return effect_parse (sequence);
 }
 
 static GHashTable*
@@ -205,7 +219,7 @@ effects_parse (const NProplist *properties)
 
     for (i = 0; effect_names[i]; i++) {
         DroidVibratorEffect *e;
-        if ((e = effect_parse (effect_names[i], properties)))
+        if ((e = effect_parse_from_proplist (effect_names[i], properties)))
             g_hash_table_insert (effects, g_strdup(effect_names[i]), e);
     }
 
@@ -227,19 +241,30 @@ droid_vibrator_sink_prepare (NSinkInterface *iface, NRequest *request)
 {
     DroidVibratorData *data;
     DroidVibratorEffect *effect;
+    gboolean one_shot = FALSE;
     const gchar *key;
+    const gchar *sequence;
     const NProplist *properties = n_request_get_properties (request);
 
     N_DEBUG (LOG_CAT "sink prepare");
 
-    if (!(key = n_haptic_effect_for_request (request))) {
-        N_DEBUG (LOG_CAT "no effect key found for this effect");
-        return FALSE;
-    }
+    if ((sequence = n_proplist_get_string (properties, EFFECT_SEQUENCE))) {
+        effect = effect_parse (sequence);
+        if (!effect) {
+            N_DEBUG (LOG_CAT "invalid effect sequence: %s", sequence);
+            return FALSE;
+        }
+        one_shot = TRUE;
+    } else {
+        if (!(key = n_haptic_effect_for_request (request))) {
+            N_DEBUG (LOG_CAT "no effect key found for this request");
+            return FALSE;
+        }
 
-    if (!(effect = g_hash_table_lookup (plugin_effects, key))) {
-        N_DEBUG (LOG_CAT "no effect with key %s found for this effect", key);
-        return FALSE;
+        if (!(effect = g_hash_table_lookup (plugin_effects, key))) {
+            N_DEBUG (LOG_CAT "no effect with key %s found for this effect", key);
+            return FALSE;
+        }
     }
 
     data = g_slice_new0 (DroidVibratorData);
@@ -250,6 +275,7 @@ droid_vibrator_sink_prepare (NSinkInterface *iface, NRequest *request)
     data->current_step   = effect->steps;
     data->remaining      = n_proplist_get_uint (properties, HAPTIC_DURATION);
     data->repeat_count   = data->remaining ? REPEAT_FOREVER : effect->repeat;
+    data->one_shot       = one_shot;
 
     n_request_store_data (request, AV_KEY, data);
     n_sink_interface_synchronize (iface, request);
@@ -370,6 +396,8 @@ droid_vibrator_sink_stop (NSinkInterface *iface, NRequest *request)
     data = (DroidVibratorData*) n_request_get_data (request, AV_KEY);
     g_assert (data);
     sequence_stop (data);
+    if (data->one_shot)
+        effect_free (data->current_effect);
     g_slice_free (DroidVibratorData, data);
 }
 
