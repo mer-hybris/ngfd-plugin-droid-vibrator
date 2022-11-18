@@ -38,8 +38,6 @@
 #define MIN_STEP_TIME           (1)     /* 1 ms */
 #define MAX_REPEATS             (100)
 #define REPEAT_FOREVER          (-1)
-#define HAPTIC_DURATION         "haptic.duration"
-#define EFFECT_SEQUENCE         "haptic.sequence"
 
 enum EffectStepType {
     EFFECT_STEP_NONE,
@@ -242,13 +240,14 @@ droid_vibrator_sink_prepare (NSinkInterface *iface, NRequest *request)
     DroidVibratorData *data;
     DroidVibratorEffect *effect;
     gboolean one_shot = FALSE;
+    gint repeat = -1; /* -1 not set, 1 TRUE, 0 FALSE */
     const gchar *key;
     const gchar *sequence;
     const NProplist *properties = n_request_get_properties (request);
 
     N_DEBUG (LOG_CAT "sink prepare");
 
-    if ((sequence = n_proplist_get_string (properties, EFFECT_SEQUENCE))) {
+    if ((sequence = n_proplist_get_string (properties, N_HAPTIC_SEQUENCE_KEY))) {
         effect = effect_parse (sequence);
         if (!effect) {
             N_DEBUG (LOG_CAT "invalid effect sequence: %s", sequence);
@@ -265,6 +264,9 @@ droid_vibrator_sink_prepare (NSinkInterface *iface, NRequest *request)
             N_DEBUG (LOG_CAT "no effect with key %s found for this effect", key);
             return FALSE;
         }
+
+        if (n_proplist_has_key (properties, N_HAPTIC_REPEAT_KEY))
+            repeat = n_proplist_get_bool (properties, N_HAPTIC_REPEAT_KEY);
     }
 
     data = g_slice_new0 (DroidVibratorData);
@@ -273,8 +275,18 @@ droid_vibrator_sink_prepare (NSinkInterface *iface, NRequest *request)
     data->sequence_id    = 0;
     data->current_effect = effect;
     data->current_step   = effect->steps;
-    data->remaining      = n_proplist_get_uint (properties, HAPTIC_DURATION);
-    data->repeat_count   = data->remaining ? REPEAT_FOREVER : effect->repeat;
+    data->remaining      = n_proplist_get_uint (properties, N_HAPTIC_DURATION_KEY);
+    /* If haptic.repeat is explicitly set to false then, if
+     * repeat count was forever -> repeat once
+     * repeat count was defined -> repeat the defined count */
+    if (repeat == 0)
+        data->repeat_count = effect->repeat == REPEAT_FOREVER ? 1 : effect->repeat;
+    /* If haptic.repeat is explicitly set to true, then change the
+     * repeat count to REPEAT_FOREVER */
+    else if (repeat == 1)
+        data->repeat_count = REPEAT_FOREVER;
+    else
+        data->repeat_count = data->remaining ? REPEAT_FOREVER : effect->repeat;
     data->one_shot       = one_shot;
 
     n_request_store_data (request, AV_KEY, data);
