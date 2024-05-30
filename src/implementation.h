@@ -10,6 +10,7 @@
 #define IMPLEMENTATION_DESCRIPTION      "Haptic feedback using droid vibrator device"
 #define NATIVE_FILE_DURATION_PATH_KEY   "native.path"
 #define NATIVE_FILE_ACTIVATE_PATH_KEY   "native.activate_path"
+#define NATIVE_FILE_STATE_PATH_KEY      "native.state_path"
 
 #else
 
