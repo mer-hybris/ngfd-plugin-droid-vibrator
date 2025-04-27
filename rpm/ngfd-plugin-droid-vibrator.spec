@@ -1,6 +1,6 @@
 Name:       ngfd-plugin-droid-vibrator
 Summary:    Droid Vibrator HAL plugin for ngfd
-Version:    1.4.1
+Version:    1.4.2
 Release:    1
 License:    LGPLv2+
 URL:        https://github.com/mer-hybris/ngfd-plugin-droid-vibrator
