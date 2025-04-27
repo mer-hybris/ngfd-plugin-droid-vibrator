@@ -20,14 +20,12 @@ for the non-graphical feedback daemon.
 
 %build
 %cmake -DNATIVE_VIBRATOR=ON
-make %{?_smp_mflags}
+%make_build
 
 %install
-rm -rf %{buildroot}
 %make_install
 
 %files
-%defattr(-,root,root,-)
 %license COPYING
 %doc README
 %{_libdir}/ngf/libngfd_droid-vibrator.so
