@@ -8,7 +8,7 @@ Source:     %{name}-%{version}.tar.gz
 Requires:   ngfd >= 1.0
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(glib-2.0)
-BuildRequires:  pkgconfig(ngf-plugin) >= 1.0
+BuildRequires:  pkgconfig(ngf-plugin) >= 1.5.0
 BuildRequires:  pkgconfig(android-headers)
 BuildRequires:  pkgconfig(libvibrator)
 BuildRequires:  pkgconfig(libhardware)
